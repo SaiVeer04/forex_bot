@@ -2,7 +2,7 @@ from forex_functions import functions
 import MetaTrader5 as mt5
 import datetime
 from keras.models import Sequential
-symbol = "AUDUSD"
+symbol = "EURUSD"
 
 model = Sequential()
 
@@ -18,6 +18,11 @@ else:
 
 
 print(functions.get_confidence(symbol,model))
+arr = functions.get_confidence(symbol,model).ravel()
+dimensions = arr
+
+# Print the dimensions
+print(dimensions)
 
 
 

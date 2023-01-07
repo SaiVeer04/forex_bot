@@ -152,7 +152,7 @@ class functions:
         check = False
         f = open("currencypairs.txt", "r")
         for x in f:
-            if(x == symbol):
+            if(symbol in x):
                 check = True
         f.close()
         return check
@@ -253,9 +253,59 @@ class functions:
         x_input = x_input.reshape(x_input.shape[0], functions.ticks, 3)
         predictions = model.predict(x_input)
         predictions = scaler.inverse_transform(predictions)
-        
-        print(df_test.tail(1))
+        gmt2 = pytz.timezone('Etc/GMT-2')
+        df_test['time'] = df_test['time'].dt.tz_localize(gmt2)
+
+        # Convert the 'time' column to EST
+        est = pytz.timezone('EST')
+        df_test['time'] = df_test['time'].dt.tz_convert(est)
+        #print(df_test.tail(1))
+        #print(df_test['close'].tail(1))
         return predictions
+    
+
+    def get_confidence(symbol,model):
+        mt5.initialize()
+        
+        timeframe = mt5.TIMEFRAME_M5
+        symbol_ticks = mt5.copy_rates_from_pos(symbol, timeframe,0,100)
+        mt5.shutdown()
+
+        df_test = pd.DataFrame(symbol_ticks)
+        df_test['time'] = pd.to_datetime(df_test['time'],unit ='s')
+
+        new_df = functions.create_custom_indicators(df_test)
+
+         #get data from the datasets
+        close = df_test['close']
+        ema = df_test['ema']
+        rsi = df_test['sma']
+
+        #change to values
+        close_val = close.values
+        ema_val = ema.values
+        rsi_val = rsi.values
+
+        scaler = MinMaxScaler(feature_range=(0,1))
+        scaled_data = scaler.fit_transform(close_val.reshape(-1,1))
+
+        close_test = functions.prepare_predict(len(df_test),close_val)
+        ema_test = functions.prepare_predict(len(df_test),ema_val)
+        rsi_test = functions.prepare_predict(len(df_test),rsi_val)
+
+        x_input = np.concatenate((close_test, ema_test, rsi_test), axis=1)
+        x_input = x_input.reshape(x_input.shape[0], functions.ticks, 3)
+        predictions = model.predict(x_input)
+        predictions = scaler.inverse_transform(predictions)
+        gmt2 = pytz.timezone('Etc/GMT-2')
+        df_test['time'] = df_test['time'].dt.tz_localize(gmt2)
+
+        # Convert the 'time' column to EST
+        est = pytz.timezone('EST')
+        df_test['time'] = df_test['time'].dt.tz_convert(est)
+        #print(df_test.tail(1))
+        #print(df_test['close'].tail(1))
+        return predictions,df_test['close'].tail(1).values
     
    
     
